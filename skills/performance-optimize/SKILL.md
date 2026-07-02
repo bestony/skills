@@ -1,6 +1,6 @@
 ---
 name: performance-optimize
-description: Performance and high-concurrency tuning for Linux servers, Docker, Docker Swarm, CapRover, Nginx reverse proxies, and Go web services. Use when Codex needs to investigate bottlenecks, plan or apply kernel/sysctl/ulimit/container/proxy tuning, validate nofile or connection limits, prepare rollback-safe production changes, or optimize for large concurrent connection counts such as 30000+ mixed HTTP/WebSocket connections.
+description: Performance and high-concurrency tuning for Linux servers, Docker, Docker Swarm, CapRover, Nginx reverse proxies, and Go web services. Use when investigating bottlenecks, planning or applying kernel/sysctl/ulimit/container/proxy tuning, validating nofile or connection limits, preparing rollback-safe production changes, or optimizing for high concurrency such as tens of thousands or more mixed HTTP/WebSocket connections.
 ---
 
 # Performance Optimize
@@ -18,14 +18,14 @@ Do not apply host-level sysctl, Docker daemon, Swarm service, CapRover, or Nginx
 3. Identify the active cap. Prioritize hard ceilings such as Nginx `worker_processes`, `worker_connections`, process `nofile`, Docker default ulimits, listen backlogs, conntrack limits, and app server limits before micro-optimizing.
 4. Back up every file or generated template that will be changed. Use timestamped backups and record the exact pre-change values.
 5. Change persistent sources of truth, not generated artifacts, unless the generated file is the documented source. For CapRover, prefer `/captain/data` templates and config paths over one-off edits under `/captain/generated`.
-6. Validate config syntax before restarting. Use service-specific validators such as `sysctl --system`, `dockerd --validate --config-file /etc/docker/daemon.json`, and `docker exec captain-nginx nginx -t`.
+6. Validate config syntax before restarting. Use service-specific validators such as `dockerd --validate --config-file /etc/docker/daemon.json` and `docker exec captain-nginx nginx -t`. Note that `sysctl --system` applies settings immediately rather than validating them, so review sysctl drop-ins before running it.
 7. Restart or update the smallest safe set of components. When Docker or Swarm is involved, expect brief interruption and watch task replacement live.
 8. Verify effective runtime state, not only files on disk. Check process limits, rendered Nginx config, listening ports, health checks, Swarm task status, logs, socket summaries, and network counters.
 9. Report final state with before/after caps, changed files, validation commands, remaining risks, and rollback instructions.
 
 ## Resource Selection
 
-Read `references/debian-docker-caprover-high-concurrency.md` when the server uses Debian, Docker or Docker Swarm, CapRover, and Nginx as the HTTPS reverse proxy, especially for 30000+ concurrent mixed connections.
+Read `references/debian-docker-caprover-high-concurrency.md` when the server uses Debian, Docker or Docker Swarm, CapRover, and Nginx as the HTTPS reverse proxy, especially for tens of thousands or more concurrent mixed connections.
 
 For other stacks, use the same workflow but adapt values to the workload, memory budget, kernel version, container runtime, proxy, and application server. Avoid copying CapRover-specific template paths into non-CapRover systems.
 

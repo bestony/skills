@@ -1,6 +1,6 @@
 # Debian Docker CapRover High-Concurrency Tuning
 
-Use this reference for HTTPS traffic that enters CapRover Nginx and is proxied to a Go application, with a mixed workload target around 30000 concurrent connections. Brief Docker, CapRover, and Nginx restarts are acceptable.
+Use this reference for HTTPS traffic that enters CapRover Nginx and is proxied to a Go application, with a high-concurrency mixed workload of tens of thousands of concurrent connections or more. Brief Docker, CapRover, and Nginx restarts are acceptable. Scale the concrete values below to the actual connection target and memory budget.
 
 ## Baseline Findings To Confirm
 
@@ -20,6 +20,8 @@ ts="$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "/root/high-concurrency-backups/$ts"
 cp -a /etc/sysctl.d "/root/high-concurrency-backups/$ts/sysctl.d"
 cp -a /etc/systemd "/root/high-concurrency-backups/$ts/systemd"
+test -d /etc/modules-load.d && cp -a /etc/modules-load.d "/root/high-concurrency-backups/$ts/modules-load.d"
+test -d /etc/modprobe.d && cp -a /etc/modprobe.d "/root/high-concurrency-backups/$ts/modprobe.d"
 test -f /etc/docker/daemon.json && cp -a /etc/docker/daemon.json "/root/high-concurrency-backups/$ts/daemon.json"
 test -f /captain/data/config-captain.json && cp -a /captain/data/config-captain.json "/root/high-concurrency-backups/$ts/config-captain.json"
 test -d /captain/generated/nginx && cp -a /captain/generated/nginx "/root/high-concurrency-backups/$ts/generated-nginx"
@@ -50,6 +52,7 @@ net.ipv4.tcp_keepalive_intvl = 30
 net.ipv4.tcp_keepalive_probes = 5
 
 net.netfilter.nf_conntrack_max = 1048576
+net.netfilter.nf_conntrack_buckets = 262144
 net.netfilter.nf_conntrack_tcp_timeout_established = 86400
 net.netfilter.nf_conntrack_tcp_timeout_close = 30
 net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30
@@ -61,13 +64,17 @@ net.ipv4.tcp_congestion_control = bbr
 net.core.rps_sock_flow_entries = 32768
 ```
 
-Before enabling BBR, try to load the modules:
+Keep `nf_conntrack_buckets` at roughly `nf_conntrack_max / 4`. On kernels where that key is read-only, set the module option instead in `/etc/modprobe.d/nf_conntrack.conf` with `options nf_conntrack hashsize=262144`.
+
+Load the required modules now and persist them across reboots. The `net.netfilter.*` keys are silently skipped if `nf_conntrack` is not loaded when `sysctl --system` runs:
 
 ```bash
+modprobe nf_conntrack || true
 modprobe tcp_bbr || true
 modprobe sch_fq || true
+printf '%s\n' nf_conntrack tcp_bbr sch_fq > /etc/modules-load.d/99-high-concurrency.conf
 sysctl --system
-sysctl net.ipv4.tcp_congestion_control net.core.default_qdisc
+sysctl net.ipv4.tcp_congestion_control net.core.default_qdisc net.netfilter.nf_conntrack_max
 ```
 
 Keep `net.ipv4.tcp_tw_reuse=2` unchanged unless the user explicitly wants to revisit the NAT and mixed-traffic tradeoff.
@@ -184,6 +191,8 @@ http {
     open_file_cache_errors on;
 }
 ```
+
+Confirm the CapRover template defines the `main` log format before keeping `access_log ... main`. If it does not, reuse the format name the template already defines or drop the format argument; otherwise `nginx -t` fails.
 
 Create or update `/captain/data/server-block-conf-override.ejs` from the current default app template. Preserve existing CapRover behavior while adding proxy keepalive and WebSocket headers:
 
