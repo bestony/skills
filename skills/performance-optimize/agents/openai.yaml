@@ -1,0 +1,4 @@
+interface:
+  display_name: "Performance Optimize"
+  short_description: "Tune Debian/Docker/CapRover systems"
+  default_prompt: "Use $performance-optimize to plan and validate high-concurrency tuning for this server."

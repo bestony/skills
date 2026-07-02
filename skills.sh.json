@@ -1,0 +1,11 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Server Ops",
+      "description": "Skills for Server Ops.",
+      "skills": ["performance-optimize"]
+    }
+  ]
+}
