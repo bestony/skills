@@ -20,16 +20,6 @@ npx skills add bestony/skills
   servers, Docker, Docker Swarm, CapRover, Nginx reverse proxies, and Go web
   services.
 
-## Repository Structure
-
-- `skills.sh.json`: skills.sh collection metadata and grouping configuration.
-- `skills/performance-optimize/SKILL.md`: Main skill instructions and routing
-  guidance for performance optimization work.
-- `skills/performance-optimize/agents/openai.yaml`: OpenAI agent interface
-  metadata for the skill.
-- `skills/performance-optimize/references/`: Supporting implementation
-  references for stack-specific tuning workflows.
-
 ## Usage
 
 After installation, invoke the skill from a compatible agent when you need its
