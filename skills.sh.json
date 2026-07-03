@@ -5,7 +5,7 @@
     {
       "title": "Server Ops",
       "description": "Skills for Server Ops.",
-      "skills": ["performance-optimize"]
+      "skills": ["caprover-log-analysis", "performance-optimize"]
     }
   ]
 }

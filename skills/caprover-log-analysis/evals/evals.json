@@ -1,0 +1,50 @@
+{
+  "skill_name": "caprover-log-analysis",
+  "evals": [
+    {
+      "id": 1,
+      "name": "stepcleaner-health-investigation",
+      "prompt": "我在 bj 这台 CapRover 服务器上有个叫 stepcleaner 的应用，感觉不太对劲。SSH 到 bj 帮我看看它的运行状态和最近 1 小时的相关日志，告诉我它到底有没有问题、是什么问题。只做只读操作，不要改任何东西。",
+      "expected_output": "中文事故式报告：使用 srv-captain--stepcleaner 全名检查服务与任务状态（docker service ps --no-trunc），如实报告副本健康状况，拉取带 --since 时间窗的日志并检查 captain-captain 中的相关部署记录，全程无变更命令。",
+      "files": [],
+      "expectations": [
+        "Transcript uses the full service name 'srv-captain--stepcleaner' in docker commands (not bare 'stepcleaner')",
+        "Transcript runs 'docker service ps' with '--no-trunc' on the stepcleaner service and the report states the replica/task health it found (healthy or not, with the actual replica count)",
+        "Log-reading commands are time-bounded ('--since' or '--tail') and redirect stderr with '2>&1'",
+        "Transcript reads captain-captain logs (docker service logs captain-captain) to check deployment/lifecycle events for stepcleaner",
+        "No state-changing docker commands appear anywhere in the transcript (no 'service update', 'service scale', 'service rm', 'restart', 'rollback', 'stack deploy')",
+        "Final report is in Chinese and includes: time window examined, log sources, findings ordered by severity (or an explicit healthy/no-anomaly statement), key log excerpts, probable cause, and recommended next actions"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "nginx-access-log-analysis",
+      "prompt": "帮我分析一下 bj 这台 CapRover 服务器最近 30 分钟的 nginx 访问日志：各域名的流量分布、状态码分布，有没有可疑的扫描行为或异常错误。SSH 到 bj 上看，只读操作。",
+      "expected_output": "中文报告：通过 docker service logs captain-nginx 读取日志（不是 exec 进容器找文件），按 vhost 分组统计流量与状态码，给出真实计数（top 域名、top IP/path），对扫描行为有明确判断。",
+      "files": [],
+      "expectations": [
+        "Nginx logs are read via 'docker service logs captain-nginx' (with a time bound such as '--since 30m')",
+        "Transcript does NOT use 'docker exec' to enter the nginx container looking for access.log/error.log files on disk",
+        "Report gives per-domain (vhost) traffic distribution with actual request counts, derived from grouping log lines by the vhost field",
+        "Report gives a status-code distribution with actual counts (e.g. how many 200/404/5xx), not vague descriptions like 'mostly fine'",
+        "Report makes an explicit determination about scanning/suspicious activity, backed by evidence such as top client IPs, suspicious paths, or 404 patterns (either finding scanners or explicitly stating none were found)",
+        "No state-changing docker commands appear anywhere in the transcript, and the final report is in Chinese"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "kimai-multi-container-correlation",
+      "prompt": "bj 服务器上的 kimai 应用最近不知道稳不稳定。把 kimai 相关的所有容器最近 2 小时的日志做一个联合分析，跨服务关联一下有没有共同的根因，再对照 nginx 里 kimai 域名的访问记录看看用户侧有没有受影响。SSH 到 bj，只读。",
+      "expected_output": "中文报告：发现全部三个兄弟服务（kimai、kimai-db、kimai-fpm），同一时间窗组合拉取日志，量化聚合错误，跨服务时间线关联，并用 nginx 日志按 kimai 域名过滤验证用户侧影响。",
+      "files": [],
+      "expectations": [
+        "Transcript discovers and names all three kimai sibling services: srv-captain--kimai, srv-captain--kimai-db, and srv-captain--kimai-fpm (e.g. via 'docker service ls' with a name filter)",
+        "Logs are pulled from all three kimai services over the same ~2h time window using time-bounded 'docker service logs' commands with '2>&1'",
+        "Error analysis is quantitative: the report states counts of error occurrences per service (or explicitly states zero errors found per service), not just 'there are some errors'",
+        "The report correlates findings across services (timeline or causal chain between db, app, and fpm), or explicitly concludes no cross-service correlation exists",
+        "Transcript filters captain-nginx logs by the kimai domain/vhost to assess user-facing impact, and the report states that assessment with counts",
+        "No state-changing docker commands appear anywhere in the transcript, and the final report is in Chinese with time window, log sources, findings, excerpts, cause analysis, and recommendations"
+      ]
+    }
+  ]
+}

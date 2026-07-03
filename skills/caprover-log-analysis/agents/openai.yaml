@@ -1,0 +1,4 @@
+interface:
+  display_name: "CapRover Log Analysis"
+  short_description: "Read & analyze CapRover/Swarm container logs"
+  default_prompt: "Use $caprover-log-analysis to investigate logs on this CapRover server."
