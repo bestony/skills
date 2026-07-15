@@ -129,10 +129,20 @@ Merge these keys into `/etc/docker/daemon.json`; do not overwrite unrelated keys
   "log-opts": {
     "max-size": "100m",
     "max-file": "5"
-  },
-  "userland-proxy": false
+  }
 }
 ```
+
+Do NOT set `"userland-proxy": false` on CapRover / Swarm hosts. It kills hairpin
+access to ingress-published ports (host or container → own public IP / 127.0.0.1),
+which breaks CapRover's domain self-verification and health checks: enabling HTTPS
+fails with "Verification failed" and `captain-captain` logs
+`Captain health check failed` / `NGINX health check failed` every cycle, while
+external traffic keeps working — so the breakage is invisible to outside-only checks.
+The performance gain is negligible anyway: Swarm ingress data path is kernel
+IPVS/iptables; docker-proxy only serves the loopback/hairpin cases. (Incident:
+143.110.146.25, 2026-07-16 — auto SSL broken until the key was removed and Docker
+restarted.)
 
 Validate before restart:
 
@@ -142,7 +152,14 @@ systemctl restart docker
 docker info --format '{{json .DefaultUlimits}}'
 ```
 
-After setting `userland-proxy=false`, verify published ports still bind and receive traffic.
+After any daemon.json change plus Docker restart, verify the loopback path as well as
+external reachability — CapRover's SSL pre-check depends on it:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -H "Host: captain.<rootDomain>" http://127.0.0.1/
+curl -s -o /dev/null -w "%{http_code}\n" -H "Host: captain.<rootDomain>" http://<public-ip>/
+# Expect 302/200. Timeout or 000 means hairpin is broken and auto SSL will fail.
+```
 
 ## Swarm Service Updates
 
@@ -256,4 +273,4 @@ Check HTTP and HTTPS health endpoints from outside the host when possible.
 
 ## Rollback
 
-Restore the timestamped backups, validate config syntax, then restart the smallest affected component. If Docker daemon restart breaks published ports, revert `userland-proxy=false` first and restart Docker again. If CapRover routing breaks, revert the CapRover Nginx template override and confirm `docker exec captain-nginx nginx -t` before reloading.
+Restore the timestamped backups, validate config syntax, then restart the smallest affected component. If published ports, hairpin/loopback access, CapRover health checks, or auto SSL break after a daemon restart, check `/etc/docker/daemon.json` for `"userland-proxy": false`, remove it, and restart Docker again. If CapRover routing breaks, revert the CapRover Nginx template override and confirm `docker exec captain-nginx nginx -t` before reloading.
